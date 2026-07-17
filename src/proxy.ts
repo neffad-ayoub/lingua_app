@@ -9,7 +9,7 @@ export async function proxy(request: NextRequest) {
     loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
-  return NextResponse.next();
+  return;
 }
 
 export const config = {
