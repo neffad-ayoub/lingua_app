@@ -1,0 +1,38 @@
+▲ Next.js 16.2.10 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://172.19.0.1:3000
+- Environments: .env
+✓ Ready in 3.3s
+  Skipping creating a lockfile at E:\dev\awesome-windows-main\awesome-windows-main\linguaconnect\.next\dev\lock because we're using WASM bindings
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+  	- include was updated to add '.next/types/**/*.ts'
+  	- include was updated to add '.next/dev/types/**/*.ts'
+
+
+○ Compiling / ...
+ GET / 200 in 3.4s (next.js: 1570ms, application-code: 1879ms)
+○ Compiling /login ...
+ GET /api/users 200 in 5.8s (next.js: 4.8s, application-code: 988ms)
+ GET /login 200 in 9.2s (next.js: 8.1s, application-code: 1043ms)
+○ Compiling /register ...
+ GET /api/meetings 400 in 5.4s (next.js: 5.1s, application-code: 289ms)
+ GET /register 200 in 5.8s (next.js: 4.9s, application-code: 870ms)
+○ Compiling /discover ...
+ GET /api/posts 200 in 5.0s (next.js: 4.6s, application-code: 427ms)
+ GET /discover 200 in 4.2s (next.js: 3.8s, application-code: 450ms)
+○ Compiling /chat ...
+ GET /chat 200 in 4.7s (next.js: 3.7s, application-code: 1006ms)
+ GET /video 200 in 3.5s (next.js: 3.0s, application-code: 430ms)
+○ Compiling /meetings ...
+ GET /meetings 200 in 7.2s (next.js: 6.8s, application-code: 444ms)
+○ Compiling /feed ...
+ GET /feed 200 in 4.5s (next.js: 4.0s, application-code: 536ms)
+○ Compiling /settings ...
+ GET /settings 200 in 4.3s (next.js: 3.9s, application-code: 377ms)
+ GET /api/meetings?userId=test 200 in 446ms (next.js: 81ms, application-code: 366ms)
+ GET /api/users?lang=en 200 in 60ms (next.js: 12ms, application-code: 48ms)
+ GET /api/posts 200 in 27ms (next.js: 11ms, application-code: 16ms)
+ POST /api/posts 500 in 73ms (next.js: 4ms, application-code: 69ms)

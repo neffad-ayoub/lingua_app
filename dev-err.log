@@ -1,0 +1,3 @@
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\E:\dev\awesome-windows-main\awesome-windows-main\linguaconnect\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\E:\dev\awesome-windows-main\awesome-windows-main\linguaconnect\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+You provided a `value` prop to a form field without an `onChange` handler. This will render a read-only field. If the field should be mutable use `defaultValue`. Otherwise, set `onChange`.

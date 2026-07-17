@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ───────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  bio           String?   @db.Text
+  videoIntro    String?
+  timezone      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  profile        UserProfile?
+  userLanguages  UserLanguage[]
+  corrections    Correction[]
+  sentMessages   Message[]
+  conversations  ConversationMember[]
+  meetings       Meeting[]      @relation("MeetingOwner")
+  meetingGuest   Meeting[]      @relation("MeetingGuest")
+  ratings        Rating[]       @relation("RatedUser")
+  givenRatings   Rating[]       @relation("GivenByUser")
+  posts          Post[]
+  postComments   PostComment[]
+  reports        Report[]       @relation("ReportedUser")
+  givenReports   Report[]       @relation("ReportedByUser")
+  blocks         Block[]        @relation("Blocker")
+  blockedBy      Block[]        @relation("Blocked")
+  availability   Availability[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Profile & Languages ────────────────────────────────
+
+enum Proficiency {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+  NATIVE
+}
+
+model UserProfile {
+  id      String  @id @default(cuid())
+  userId  String  @unique
+  country String?
+  city    String?
+  lat     Float?
+  lng     Float?
+  showMap Boolean @default(false)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Language {
+  id          String         @id @default(cuid())
+  code        String         @unique
+  name        String
+  flag        String
+  userLangs   UserLanguage[]
+  meetings    Meeting[]
+  posts       Post[]
+
+  @@index([code])
+}
+
+model UserLanguage {
+  id          String      @id @default(cuid())
+  userId      String
+  languageId  String
+  isNative    Boolean
+  proficiency Proficiency @default(B1)
+  language    Language    @relation(fields: [languageId], references: [id])
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, languageId, isNative])
+  @@index([userId])
+  @@index([languageId])
+}
+
+// ─── Matching & Availability ────────────────────────────
+
+model Availability {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  startHour Int
+  endHour   Int
+}
+
+// ─── Chat & Messages ────────────────────────────────────
+
+model Conversation {
+  id        String               @id @default(cuid())
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  isGroup   Boolean              @default(false)
+  name      String?
+  messages  Message[]
+  members   ConversationMember[]
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String       @db.Text
+  type           MessageType  @default(TEXT)
+  fileUrl        String?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id])
+  corrections    Correction[]
+
+  @@index([conversationId, createdAt])
+}
+
+enum MessageType {
+  TEXT
+  VOICE
+  VIDEO
+  IMAGE
+  SYSTEM
+}
+
+// ─── Corrections ────────────────────────────────────────
+
+model Correction {
+  id        String    @id @default(cuid())
+  messageId String
+  authorId  String
+  original  String    @db.Text
+  corrected String    @db.Text
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+  message   Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@index([messageId])
+}
+
+// ─── Meetings & Video Calls ─────────────────────────────
+
+model Meeting {
+  id          String        @id @default(cuid())
+  ownerId     String
+  guestId     String?
+  title       String?
+  roomCode    String        @unique
+  languageId  String?
+  status      MeetingStatus @default(PENDING)
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime      @default(now())
+  owner       User          @relation("MeetingOwner", fields: [ownerId], references: [id])
+  guest       User?         @relation("MeetingGuest", fields: [guestId], references: [id])
+  language    Language?     @relation(fields: [languageId], references: [id])
+  ratings     Rating[]
+
+  @@index([roomCode])
+}
+
+enum MeetingStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Rating {
+  id        String      @id @default(cuid())
+  meetingId String
+  userId    String
+  givenById String
+  score     Int
+  comment   String?     @db.Text
+  createdAt DateTime    @default(now())
+  meeting   Meeting     @relation(fields: [meetingId], references: [id])
+  user      User        @relation("RatedUser", fields: [userId], references: [id])
+  givenBy   User        @relation("GivenByUser", fields: [givenById], references: [id])
+
+  @@unique([meetingId, givenById])
+}
+
+// ─── Posts (Public Feed) ────────────────────────────────
+
+model Post {
+  id         String        @id @default(cuid())
+  authorId   String
+  content    String        @db.Text
+  languageId String?
+  createdAt  DateTime      @default(now())
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  language   Language?     @relation(fields: [languageId], references: [id])
+  comments   PostComment[]
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+// ─── Safety ─────────────────────────────────────────────
+
+model Report {
+  id          String       @id @default(cuid())
+  reportedId  String
+  reportedById String
+  reason      String
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  reported    User         @relation("ReportedUser", fields: [reportedId], references: [id])
+  reportedBy  User         @relation("ReportedByUser", fields: [reportedById], references: [id])
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+}

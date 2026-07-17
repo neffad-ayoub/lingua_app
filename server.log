@@ -1,0 +1,90 @@
+▲ Next.js 16.2.10 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env
+✓ Ready in 3.0s
+  Skipping creating a lockfile at E:\dev\awesome-windows-main\awesome-windows-main\linguaconnect\.next\dev\lock because we're using WASM bindings
+
+○ Compiling /api/auth/register ...
+ POST /api/auth/register 201 in 13.8s (next.js: 11.2s, application-code: 2.6s)
+ GET /api/users 200 in 2.7s (next.js: 2.5s, application-code: 177ms)
+ POST /api/auth/register 409 in 139ms (next.js: 83ms, application-code: 56ms)
+○ Compiling /feed ...
+ GET /feed 200 in 17.4s (next.js: 14.4s, proxy.ts: 1416ms, application-code: 1486ms)
+ GET /discover 200 in 17.4s (next.js: 14.5s, proxy.ts: 1374ms, application-code: 1488ms)
+○ Compiling / ...
+ GET / 200 in 8.5s (next.js: 6.9s, application-code: 1566ms)
+○ Compiling /_not-found ...
+ GET /grid.svg 404 in 6.4s (next.js: 4.3s, application-code: 2.1s)
+ GET /sw.js 404 in 3.1s (next.js: 1026ms, application-code: 2.1s)
+ GET /discover 200 in 4.3s (next.js: 3.2s, proxy.ts: 176ms, application-code: 894ms)
+ GET /sw.js 404 in 347ms (next.js: 41ms, application-code: 306ms)
+○ Compiling /api/auth/[...nextauth] ...
+ GET /api/users 200 in 9.6s (next.js: 7.8s, application-code: 1800ms)
+ GET /api/auth/session 200 in 13.7s (next.js: 13.7s, application-code: 44ms)
+ GET /api/auth/session 200 in 41ms (next.js: 20ms, application-code: 21ms)
+○ Compiling /video ...
+ GET /video 200 in 7.2s (next.js: 6.5s, proxy.ts: 103ms, application-code: 552ms)
+○ Compiling /meetings ...
+ GET /meetings 200 in 10.5s (next.js: 10.1s, proxy.ts: 27ms, application-code: 471ms)
+○ Compiling /feed ...
+ GET /feed 200 in 6.9s (next.js: 6.2s, proxy.ts: 235ms, application-code: 439ms)
+○ Compiling /api/posts ...
+ GET /api/posts 200 in 4.4s (next.js: 4.1s, application-code: 222ms)
+ GET /api/posts 200 in 20ms (next.js: 5ms, application-code: 15ms)
+○ Compiling /chat ...
+ GET /chat 200 in 5.4s (next.js: 4.7s, proxy.ts: 70ms, application-code: 579ms)
+ GET /chat 200 in 420ms (next.js: 18ms, proxy.ts: 221ms, application-code: 181ms)
+ GET /discover 200 in 385ms (next.js: 63ms, proxy.ts: 123ms, application-code: 198ms)
+○ Compiling /api/users ...
+ GET /api/users 200 in 3.4s (next.js: 3.4s, application-code: 36ms)
+ GET /api/users 200 in 24ms (next.js: 5ms, application-code: 18ms)
+ GET /api/users?level=A1 200 in 48ms (next.js: 5ms, application-code: 43ms)
+ GET /api/users 200 in 28ms (next.js: 4ms, application-code: 23ms)
+○ Compiling /_not-found ...
+ GET /sw.js 404 in 8.1s (next.js: 6.7s, application-code: 1422ms)
+ GET /sw.js 404 in 391ms (next.js: 8ms, application-code: 383ms)
+ GET /sw.js 404 in 262ms (next.js: 6ms, application-code: 256ms)
+ GET /sw.js 404 in 548ms (next.js: 64ms, application-code: 484ms)
+ GET /sw.js 404 in 636ms (next.js: 6ms, application-code: 630ms)
+ GET /sw.js 404 in 528ms (next.js: 9ms, application-code: 519ms)
+ GET /sw.js 404 in 342ms (next.js: 7ms, application-code: 336ms)
+ GET /sw.js 404 in 359ms (next.js: 14ms, application-code: 345ms)
+ GET /sw.js 404 in 510ms (next.js: 6ms, application-code: 503ms)
+ GET /sw.js 404 in 83ms (next.js: 4ms, application-code: 79ms)
+ GET /sw.js 404 in 94ms (next.js: 5ms, application-code: 89ms)
+ GET /sw.js 404 in 76ms (next.js: 5ms, application-code: 71ms)
+ GET /sw.js 404 in 100ms (next.js: 7ms, application-code: 93ms)
+ GET /sw.js 404 in 171ms (next.js: 4ms, application-code: 167ms)
+  Reload env: .env
+ GET /discover 200 in 1065ms (next.js: 596ms, proxy.ts: 98ms, application-code: 371ms)
+○ Compiling /_not-found ...
+ GET /sw.js 404 in 5.3s (next.js: 4.2s, application-code: 1046ms)
+ GET /sw.js 404 in 194ms (next.js: 7ms, application-code: 187ms)
+  Reload env: .env
+ GET /discover 200 in 849ms (next.js: 596ms, proxy.ts: 68ms, application-code: 185ms)
+ GET /sw.js 404 in 806ms (next.js: 38ms, application-code: 768ms)
+  Reload env: .env
+ GET /discover 200 in 807ms (next.js: 458ms, proxy.ts: 62ms, application-code: 286ms)
+ GET /sw.js 404 in 381ms (next.js: 30ms, application-code: 351ms)
+  Reload env: .env
+ GET /discover 200 in 421ms (next.js: 211ms, proxy.ts: 23ms, application-code: 186ms)
+ GET /sw.js 404 in 421ms (next.js: 26ms, application-code: 395ms)
+  Reload env: .env
+ GET /discover 200 in 543ms (next.js: 299ms, proxy.ts: 84ms, application-code: 161ms)
+  Reload env: .env
+ GET /discover 200 in 488ms (next.js: 223ms, proxy.ts: 25ms, application-code: 241ms)
+  Reload env: .env
+ GET /discover 200 in 550ms (next.js: 297ms, proxy.ts: 34ms, application-code: 219ms)
+ GET /sw.js 404 in 619ms (next.js: 32ms, application-code: 587ms)
+  Reload env: .env
+ GET /discover 200 in 554ms (next.js: 238ms, proxy.ts: 54ms, application-code: 262ms)
+ GET /sw.js 404 in 554ms (next.js: 35ms, application-code: 518ms)
+ GET /discover 200 in 185ms (next.js: 14ms, proxy.ts: 33ms, application-code: 138ms)
+ GET /discover 200 in 212ms (next.js: 13ms, proxy.ts: 68ms, application-code: 132ms)
+ GET /discover 200 in 199ms (next.js: 30ms, proxy.ts: 24ms, application-code: 145ms)
+ GET /discover 200 in 357ms (next.js: 20ms, proxy.ts: 26ms, application-code: 311ms)
+ GET /discover 200 in 139ms (next.js: 8ms, proxy.ts: 28ms, application-code: 104ms)
+ GET /sw.js 404 in 3.5s (next.js: 2.9s, application-code: 630ms)
+ GET /discover 200 in 209ms (next.js: 33ms, proxy.ts: 34ms, application-code: 142ms)
+ GET /discover 200 in 5.9s (next.js: 4.6s, proxy.ts: 980ms, application-code: 250ms)
