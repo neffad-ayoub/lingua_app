@@ -1,4 +1,4 @@
-export { auth as proxy } from '@/lib/auth';
+export { auth as proxy } from '@/lib/auth-middleware';
 
 export const config = {
   matcher: ['/discover', '/chat', '/video', '/meetings', '/feed', '/settings'],
