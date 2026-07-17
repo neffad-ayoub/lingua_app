@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
-import { Room, RoomEvent, createLocalTracks, type RemoteParticipant, type RemoteTrackPublication } from 'livekit-client';
+import { Track, Room, RoomEvent, createLocalTracks, type RemoteParticipant, type RemoteTrackPublication } from 'livekit-client';
 
 function VideoCallContent() {
   const searchParams = useSearchParams();
@@ -170,7 +170,7 @@ function VideoCallContent() {
 
   const toggleMute = async () => {
     if (!roomRef.current) return;
-    const pub = roomRef.current.localParticipant.getTrackPublication('audio');
+    const pub = roomRef.current.localParticipant.getTrackPublication(Track.Source.Microphone);
     if (pub?.track) {
       await (isMuted ? pub.track.unmute() : pub.track.mute());
     }
@@ -179,7 +179,7 @@ function VideoCallContent() {
 
   const toggleVideo = async () => {
     if (!roomRef.current) return;
-    const pub = roomRef.current.localParticipant.getTrackPublication('video');
+    const pub = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera);
     if (pub?.track) {
       await (isVideoOff ? pub.track.unmute() : pub.track.mute());
     }
