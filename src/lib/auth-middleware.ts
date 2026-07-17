@@ -9,6 +9,9 @@ const { auth: handler } = NextAuth({
       async authorize() { return null; },
     }),
   ],
+  pages: {
+    signIn: '/login',
+  },
   session: { strategy: 'jwt' },
   trustHost: true,
 });
