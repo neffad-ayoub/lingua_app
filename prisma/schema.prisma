@@ -36,6 +36,7 @@ model User {
   givenRatings   Rating[]       @relation("GivenByUser")
   posts          Post[]
   postComments   PostComment[]
+  likes          PostLike[]
   reports        Report[]       @relation("ReportedUser")
   givenReports   Report[]       @relation("ReportedByUser")
   blocks         Block[]        @relation("Blocker")
