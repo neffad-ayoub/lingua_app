@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
@@ -42,6 +43,32 @@ export async function GET(request: Request) {
     return NextResponse.json({ users });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to fetch users' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { userId, password } = body;
+
+    if (!userId || !password) {
+      return NextResponse.json({ error: 'userId and password are required' }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.password) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid password' }, { status: 403 });
+    }
+
+    await prisma.user.delete({ where: { id: userId } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
   }
 }
 

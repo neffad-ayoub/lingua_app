@@ -16,6 +16,8 @@ interface Post {
   content: string;
   language: { code: string; name: string; flag: string } | null;
   createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
   comments: { id: string; content: string; author: { name: string | null } }[];
 }
 
@@ -28,14 +30,16 @@ export default function FeedPage() {
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch('/api/posts')
+    const params = new URLSearchParams();
+    if (session?.user?.id) params.set('userId', session.user.id);
+    fetch(`/api/posts?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         setPosts(data.posts || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [session]);
 
   const handlePost = async () => {
     if (!newPost.trim() || !session?.user?.id) return;
@@ -58,10 +62,19 @@ export default function FeedPage() {
   };
 
   const handleLike = async (postId: string) => {
-    // Optimistic UI — toggle locally
+    if (!session?.user?.id) return;
     setPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p } : p))
+      prev.map((p) =>
+        p.id === postId
+          ? { ...p, likedByMe: !p.likedByMe, likeCount: p.likeCount + (p.likedByMe ? -1 : 1) }
+          : p
+      )
     );
+    await fetch('/api/likes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId, userId: session.user.id }),
+    });
   };
 
   const handleComment = useCallback(async (postId: string) => {
@@ -151,9 +164,12 @@ export default function FeedPage() {
               <div className="flex items-center gap-4 border-t border-slate-100 pt-3">
                 <button
                   onClick={() => handleLike(post.id)}
-                  className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-red-400 transition-colors"
+                  className={`flex items-center gap-1.5 text-sm transition-colors ${
+                    post.likedByMe ? 'text-red-500' : 'text-slate-400 hover:text-red-400'
+                  }`}
                 >
-                  🤍
+                  {post.likedByMe ? '❤️' : '🤍'}
+                  <span>{post.likeCount > 0 ? post.likeCount : ''}</span>
                 </button>
                 {post.language && (
                   <Badge variant="info" className="ml-auto">

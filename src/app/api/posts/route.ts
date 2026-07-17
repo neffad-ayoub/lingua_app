@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId');
 
-export async function GET() {
   try {
     const posts = await prisma.post.findMany({
       include: {
@@ -12,12 +12,22 @@ export async function GET() {
             author: { select: { id: true, name: true, image: true } },
           },
         },
+        likes: userId
+          ? { where: { userId }, take: 1 }
+          : false,
+        _count: { select: { likes: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
 
-    return NextResponse.json({ posts });
+    const postsWithLikes = posts.map(({ likes, _count, ...rest }) => ({
+      ...rest,
+      likeCount: _count.likes,
+      likedByMe: Array.isArray(likes) ? likes.length > 0 : false,
+    }));
+
+    return NextResponse.json({ posts: postsWithLikes });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
   }

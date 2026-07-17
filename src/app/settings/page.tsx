@@ -15,6 +15,15 @@ export default function SettingsPage() {
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState('');
+  const [pwNew, setPwNew] = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (session?.user) {
@@ -170,13 +179,79 @@ export default function SettingsPage() {
           />
         </section>
 
+        {/* Change password */}
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold">Change Password</h2>
+          {pwError && (
+            <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200">{pwError}</div>
+          )}
+          {pwSuccess && (
+            <div className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-600 border border-green-200">{pwSuccess}</div>
+          )}
+          <div className="space-y-3">
+            <Input label="Current Password" type="password" placeholder="Your current password" value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
+            <Input label="New Password" type="password" placeholder="Min. 8 characters" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+            <Input label="Confirm New Password" type="password" placeholder="Repeat new password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} />
+            <Button
+              variant="secondary"
+              disabled={pwLoading || !pwCurrent || !pwNew || !pwConfirm || pwNew !== pwConfirm}
+              onClick={async () => {
+                if (!session?.user?.id) return;
+                setPwLoading(true); setPwError(''); setPwSuccess('');
+                if (pwNew !== pwConfirm) {
+                  setPwError('Passwords do not match'); setPwLoading(false); return;
+                }
+                const res = await fetch('/api/auth/change-password', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                  setPwSuccess('Password changed successfully');
+                  setPwCurrent(''); setPwNew(''); setPwConfirm('');
+                } else {
+                  setPwError(data.error || 'Failed to change password');
+                }
+                setPwLoading(false);
+              }}
+            >
+              {pwLoading ? 'Changing...' : 'Change Password'}
+            </Button>
+          </div>
+        </section>
+
         {/* Danger zone */}
         <section className="rounded-xl border border-red-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-red-600">Account</h2>
-          <div className="flex gap-3">
-            <Button variant="secondary">Change Password</Button>
-            <Button variant="danger">Delete Account</Button>
-          </div>
+          <h2 className="mb-4 text-lg font-semibold text-red-600">Delete Account</h2>
+          <p className="mb-4 text-sm text-slate-500">This will permanently delete your account and all data. This cannot be undone.</p>
+          {deleteError && (
+            <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200">{deleteError}</div>
+          )}
+          <Input label="Enter your password to confirm" type="password" placeholder="Your password" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} />
+          <Button
+            variant="danger"
+            className="mt-3"
+            disabled={deleteLoading || !deleteConfirm}
+            onClick={async () => {
+              if (!session?.user?.id) return;
+              setDeleteLoading(true); setDeleteError('');
+              const res = await fetch('/api/users', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: session.user.id, password: deleteConfirm }),
+              });
+              if (res.ok) {
+                window.location.href = '/';
+              } else {
+                const data = await res.json();
+                setDeleteError(data.error || 'Failed to delete account');
+              }
+              setDeleteLoading(false);
+            }}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete Account'}
+          </Button>
         </section>
 
         <Button onClick={handleSave} className="w-full" disabled={saving}>

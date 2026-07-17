@@ -247,6 +247,18 @@ model Post {
   author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   language   Language?     @relation(fields: [languageId], references: [id])
   comments   PostComment[]
+  likes      PostLike[]
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
 }
 
 model PostComment {
