@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -44,7 +43,6 @@ const LEVELS = [
 type Step = 1 | 2 | 3;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -89,8 +87,8 @@ export default function RegisterPage() {
         setError('Account created but sign-in failed. Please log in.');
         setLoading(false);
       } else {
-        router.push('/discover');
-        router.refresh();
+        setLoading(false);
+        window.location.href = '/discover';
       }
     } catch {
       setError('Connection error. Please try again.');
