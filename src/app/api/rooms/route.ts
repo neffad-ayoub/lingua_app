@@ -7,11 +7,17 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { ownerId, guestId, languageId } = body;
 
+    let resolvedLanguageId = languageId || null;
+    if (resolvedLanguageId) {
+      const lang = await prisma.language.findUnique({ where: { code: resolvedLanguageId }, select: { id: true } });
+      resolvedLanguageId = lang?.id || null;
+    }
+
     const meeting = await prisma.meeting.create({
       data: {
         ownerId: ownerId || 'anonymous',
         guestId: guestId || null,
-        languageId: languageId || null,
+        languageId: resolvedLanguageId,
         roomCode: generateRoomCode(),
         status: 'ACTIVE',
       },

@@ -94,12 +94,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'scheduledAt is required' }, { status: 400 });
     }
 
+    let resolvedLanguageId = languageId || null;
+    if (resolvedLanguageId) {
+      const lang = await prisma.language.findUnique({ where: { code: resolvedLanguageId }, select: { id: true } });
+      resolvedLanguageId = lang?.id || null;
+    }
+
     const meeting = await prisma.meeting.create({
       data: {
         ownerId: session.user.id,
         guestId: guestId || null,
         title: title || null,
-        languageId: languageId || null,
+        languageId: resolvedLanguageId,
         scheduledAt: new Date(scheduledAt),
         roomCode: generateRoomCode(),
       },
