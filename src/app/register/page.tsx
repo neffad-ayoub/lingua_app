@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,19 +76,32 @@ export default function RegisterPage() {
         return;
       }
 
-      const result = await signIn('credentials', {
-        email: email.toLowerCase().trim(),
-        password,
-        redirect: false,
-        callbackUrl: '/discover',
+      const csrfRes = await fetch('/api/auth/csrf', { credentials: 'include' });
+      const { csrfToken } = await csrfRes.json();
+
+      const body = new URLSearchParams();
+      body.append('csrfToken', csrfToken);
+      body.append('email', email.toLowerCase().trim());
+      body.append('password', password);
+      body.append('callbackUrl', '/discover');
+
+      const signInRes = await fetch('/api/auth/callback/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Auth-Return-Redirect': '1',
+        },
+        body: body.toString(),
+        credentials: 'include',
       });
 
-      if (result?.error) {
+      const signInData = await signInRes.json();
+      if (!signInData.url) {
         setError('Account created but sign-in failed. Please log in.');
         setLoading(false);
       } else {
         setLoading(false);
-        window.location.href = '/discover';
+        window.location.href = signInData.url;
       }
     } catch {
       setError('Connection error. Please try again.');

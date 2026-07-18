@@ -17,19 +17,36 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const result = await signIn('credentials', {
-      email: email.toLowerCase().trim(),
-      password,
-      redirect: false,
-      callbackUrl: '/discover',
-    });
+    try {
+      const csrfRes = await fetch('/api/auth/csrf', { credentials: 'include' });
+      const { csrfToken } = await csrfRes.json();
 
-    if (result?.error) {
-      setError('Invalid email or password');
+      const body = new URLSearchParams();
+      body.append('csrfToken', csrfToken);
+      body.append('email', email.toLowerCase().trim());
+      body.append('password', password);
+      body.append('callbackUrl', '/discover');
+
+      const res = await fetch('/api/auth/callback/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Auth-Return-Redirect': '1',
+        },
+        body: body.toString(),
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError('Login failed');
+        setLoading(false);
+      }
+    } catch {
+      setError('Connection error. Please try again.');
       setLoading(false);
-    } else {
-      setLoading(false);
-      window.location.href = '/discover';
     }
   };
 
