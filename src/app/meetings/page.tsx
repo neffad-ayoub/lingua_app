@@ -106,7 +106,7 @@ export default function MeetingsPage() {
         }
       })
     );
-    setRatingInfos((prev) => ({ ...prev, ...Object.fromEntries(entries.filter(([, v]) => v !== null)) }));
+    setRatingInfos((prev) => ({ ...prev, ...Object.fromEntries(entries.filter((e): e is [string, RatingInfo] => e[1] !== null)) }));
   }, [session]);
 
   useEffect(() => {
