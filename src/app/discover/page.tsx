@@ -123,8 +123,16 @@ export default function DiscoverPage() {
     }
   }, [router, session]);
 
-  const handleVideoCall = useCallback((targetUserId: string) => {
-    router.push(`/video?partner=${targetUserId}`);
+  const handleVideoCall = useCallback(async (targetUserId: string) => {
+    const res = await fetch('/api/calls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ calleeId: targetUserId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      router.push(`/video?room=${data.call.roomCode}`);
+    }
   }, [router]);
 
   useEffect(() => {

@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+interface AvailSlot {
+  id?: string;
+  dayOfWeek: number;
+  startHour: number;
+  endHour: number;
+}
+
 export default function SettingsPage() {
   const { data: session, update } = useSession();
   const [name, setName] = useState('');
@@ -29,6 +38,10 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [availSlots, setAvailSlots] = useState<AvailSlot[]>([]);
+  const [availDay, setAvailDay] = useState('0');
+  const [availStart, setAvailStart] = useState('9');
+  const [availEnd, setAvailEnd] = useState('17');
 
   useEffect(() => {
     if (session?.user) {
@@ -50,8 +63,29 @@ export default function SettingsPage() {
           }
         })
         .catch(() => {});
+
+      fetch('/api/availability')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.availability) setAvailSlots(data.availability);
+        })
+        .catch(() => {});
     }
   }, [session]);
+
+  const addAvailSlot = () => {
+    const s = parseInt(availStart);
+    const e = parseInt(availEnd);
+    if (s >= e) return;
+    setAvailSlots((prev) => [
+      ...prev,
+      { dayOfWeek: parseInt(availDay), startHour: s, endHour: e },
+    ]);
+  };
+
+  const removeAvailSlot = (index: number) => {
+    setAvailSlots((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = async () => {
     if (!session?.user?.id) return;
@@ -78,6 +112,11 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
+        await fetch('/api/availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slots: availSlots }),
+        });
         setSaved(true);
         update({ name });
         setTimeout(() => setSaved(false), 3000);
@@ -194,6 +233,64 @@ export default function SettingsPage() {
               { value: 'mutual', label: 'People with matching languages only' },
             ]}
           />
+        </section>
+
+        {/* Availability Calendar */}
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold">Availability Calendar</h2>
+          <p className="mb-4 text-sm text-slate-500">Set your weekly availability so partners know when you're free for meetings.</p>
+
+          <div className="flex flex-wrap items-end gap-2 mb-4">
+            <div className="w-32">
+              <Select
+                label="Day"
+                value={availDay}
+                onChange={(e) => setAvailDay(e.target.value)}
+                options={DAYS.map((d, i) => ({ value: String(i), label: d }))}
+              />
+            </div>
+            <div className="w-24">
+              <label className="block text-sm font-medium text-slate-700 mb-1">From</label>
+              <select
+                value={availStart}
+                onChange={(e) => setAvailStart(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={String(h)}>{h.toString().padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+            <div className="w-24">
+              <label className="block text-sm font-medium text-slate-700 mb-1">To</label>
+              <select
+                value={availEnd}
+                onChange={(e) => setAvailEnd(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={String(h)}>{h.toString().padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+            <Button size="sm" onClick={addAvailSlot}>Add Slot</Button>
+          </div>
+
+          {availSlots.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">No availability set. Add your first time slot above.</p>
+          ) : (
+            <div className="space-y-2">
+              {availSlots.map((slot, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                  <span className="text-sm">
+                    <span className="font-medium">{DAYS[slot.dayOfWeek]}</span>
+                    {' '}{slot.startHour.toString().padStart(2, '0')}:00 – {slot.endHour.toString().padStart(2, '0')}:00
+                  </span>
+                  <button onClick={() => removeAvailSlot(i)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Change password */}

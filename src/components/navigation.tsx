@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
+import { CallNotification } from '@/components/call-notification';
 
 const navLinks = [
   { href: '/discover', label: 'Discover', icon: CompassIcon },
   { href: '/chat', label: 'Messages', icon: ChatIcon },
-  { href: '/video', label: 'Video', icon: VideoIcon },
   { href: '/meetings', label: 'Meetings', icon: CalendarIcon },
   { href: '/feed', label: 'Feed', icon: FeedIcon },
 ];
@@ -101,6 +101,7 @@ export function Navigation() {
           </Link>
         )}
       </nav>
+      <CallNotification />
     </header>
   );
 }

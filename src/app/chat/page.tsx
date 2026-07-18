@@ -6,8 +6,21 @@ import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { useSocket, getSocket } from '@/lib/socket';
+
+const LANGUAGES = [
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'pt', label: 'Portuguese' },
+];
 
 interface Contact {
   id: string;
@@ -43,6 +56,11 @@ export default function ChatPage() {
   const [reportTarget, setReportTarget] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState('inappropriate');
   const [reportDesc, setReportDesc] = useState('');
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
+  const [meetingLang, setMeetingLang] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -244,11 +262,39 @@ export default function ChatPage() {
     setReportDesc('');
   };
 
-  const startVideoCall = useCallback(() => {
-    if (!selectedContact) return;
-    const partnerId = contacts.find((c) => c.id === selectedContact.id);
-    if (partnerId) router.push(`/video?partner=${partnerId.id}`);
-  }, [selectedContact, contacts, router]);
+  const startVideoCall = useCallback(async () => {
+    if (!selectedContact || !session?.user?.id) return;
+    const res = await fetch('/api/calls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ calleeId: selectedContact.id }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      router.push(`/video?room=${data.call.roomCode}`);
+    }
+  }, [selectedContact, session, router]);
+
+  const handleScheduleMeeting = useCallback(async () => {
+    if (!selectedContact || !session?.user?.id || !meetingDate || !meetingTime) return;
+    const res = await fetch('/api/meetings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guestId: selectedContact.id,
+        title: meetingTitle || `Practice with ${selectedContact.name}`,
+        languageId: meetingLang || null,
+        scheduledAt: `${meetingDate}T${meetingTime}:00`,
+      }),
+    });
+    if (res.ok) {
+      setShowSchedule(false);
+      setMeetingTitle('');
+      setMeetingDate('');
+      setMeetingTime('');
+      setMeetingLang('');
+    }
+  }, [selectedContact, session, meetingTitle, meetingDate, meetingTime, meetingLang]);
 
   const isTypingOther = selectedContact
     ? Object.entries(typingUsers).some(([uid, typing]) => typing && uid !== session?.user?.id)
@@ -301,6 +347,7 @@ export default function ChatPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="secondary" onClick={startVideoCall}>📹 Video</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowSchedule(true)}>📅 Meeting</Button>
               <div className="relative">
                 <button
                   onClick={() => setOpenMenu(openMenu === selectedContact.id ? null : selectedContact.id)}
@@ -409,6 +456,33 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
+      <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)} title={`Schedule Meeting with ${selectedContact?.name || 'Partner'}`}>
+        <div className="space-y-4">
+          <Input
+            label="Meeting Title"
+            placeholder="e.g., Spanish Practice"
+            value={meetingTitle}
+            onChange={(e) => setMeetingTitle(e.target.value)}
+          />
+          <Select
+            label="Practice Language"
+            value={meetingLang}
+            onChange={(e) => setMeetingLang(e.target.value)}
+            options={[{ value: '', label: 'Select language...' }, ...LANGUAGES]}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Date" type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} />
+            <Input label="Time" type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setShowSchedule(false)} className="flex-1">Cancel</Button>
+            <Button onClick={handleScheduleMeeting} className="flex-1" disabled={!meetingDate || !meetingTime}>
+              Schedule Meeting
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={!!reportTarget} onClose={() => { setReportTarget(null); setReportReason('inappropriate'); setReportDesc(''); }} title="Report User">
         <div className="space-y-4">
