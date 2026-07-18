@@ -84,7 +84,7 @@ export function CallNotification() {
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xl w-72 animate-in slide-in-from-bottom-4 duration-300">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xl w-72 animate-slide-in">
         <div className="flex items-center gap-3 mb-3">
           <div className="relative">
             <Avatar name={incomingCall.owner.name || 'Caller'} size="md" />

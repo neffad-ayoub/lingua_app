@@ -47,19 +47,18 @@ export async function POST(request: Request) {
       }
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.availability.deleteMany({ where: { userId: session.user.id } });
-      if (slots.length > 0) {
-        await tx.availability.createMany({
-          data: slots.map((s) => ({
-            userId: session.user.id!,
-            dayOfWeek: s.dayOfWeek,
-            startHour: s.startHour,
-            endHour: s.endHour,
-          })),
-        });
-      }
-    });
+    const userId = session.user.id;
+    await prisma.availability.deleteMany({ where: { userId } });
+    if (slots.length > 0) {
+      await prisma.availability.createMany({
+        data: slots.map((s) => ({
+          userId,
+          dayOfWeek: s.dayOfWeek,
+          startHour: s.startHour,
+          endHour: s.endHour,
+        })),
+      });
+    }
 
     const availability = await prisma.availability.findMany({
       where: { userId: session.user.id },
