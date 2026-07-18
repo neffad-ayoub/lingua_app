@@ -21,6 +21,13 @@ interface Meeting {
   language: { code: string; name: string; flag: string } | null;
 }
 
+interface RatingInfo {
+  userRating: number | null;
+  userComment: string | null;
+  averageScore: number;
+  totalRatings: number;
+}
+
 const LANGUAGES = [
   { value: 'es', label: 'Spanish' },
   { value: 'fr', label: 'French' },
@@ -31,6 +38,8 @@ const LANGUAGES = [
   { value: 'ar', label: 'Arabic' },
   { value: 'pt', label: 'Portuguese' },
 ];
+
+const STAR_LABELS = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
 
 export default function MeetingsPage() {
   const { data: session } = useSession();
@@ -43,6 +52,10 @@ export default function MeetingsPage() {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [loading, setLoading] = useState(true);
+  const [ratingInfos, setRatingInfos] = useState<Record<string, RatingInfo>>({});
+  const [showRating, setShowRating] = useState<string | null>(null);
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
 
   const handleJoin = useCallback(async (meeting: Meeting) => {
     if (meeting.status === 'PENDING') {
@@ -68,16 +81,80 @@ export default function MeetingsPage() {
     }
   }, []);
 
+  const fetchRatings = useCallback(async (meetingsList: Meeting[]) => {
+    const completed = meetingsList.filter((m) => m.status === 'COMPLETED');
+    if (completed.length === 0) return;
+    const entries = await Promise.all(
+      completed.map(async (m) => {
+        try {
+          const partner = m.owner.id === session?.user?.id ? m.guest : m.owner;
+          if (!partner) return [m.id, null] as const;
+          const res = await fetch(`/api/ratings?userId=${partner.id}`);
+          if (!res.ok) return [m.id, null] as const;
+          const data = await res.json();
+          const userRating = data.ratings?.find(
+            (r: { givenById: string }) => r.givenById === session?.user?.id
+          );
+          return [m.id, {
+            userRating: userRating?.score || null,
+            userComment: userRating?.comment || null,
+            averageScore: data.averageScore || 0,
+            totalRatings: data.totalRatings || 0,
+          }] as const;
+        } catch {
+          return [m.id, null] as const;
+        }
+      })
+    );
+    setRatingInfos((prev) => ({ ...prev, ...Object.fromEntries(entries.filter(([, v]) => v !== null)) }));
+  }, [session]);
+
   useEffect(() => {
     if (!session?.user?.id) return;
     fetch(`/api/meetings`)
       .then((r) => r.json())
       .then((data) => {
-        setMeetings(data.meetings || []);
+        const list = data.meetings || [];
+        setMeetings(list);
         setLoading(false);
+        fetchRatings(list);
       })
       .catch(() => setLoading(false));
-  }, [session]);
+  }, [session, fetchRatings]);
+
+  const handleRate = async () => {
+    if (!showRating || !ratingScore || !session?.user?.id) return;
+    const meeting = meetings.find((m) => m.id === showRating);
+    if (!meeting) return;
+    const partner = meeting.owner.id === session.user.id ? meeting.guest : meeting.owner;
+    if (!partner) return;
+
+    const res = await fetch('/api/ratings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        meetingId: showRating,
+        userId: partner.id,
+        score: ratingScore,
+        comment: ratingComment || undefined,
+      }),
+    });
+
+    if (res.ok) {
+      setRatingInfos((prev) => ({
+        ...prev,
+        [showRating]: {
+          userRating: ratingScore,
+          userComment: ratingComment,
+          averageScore: prev[showRating]?.averageScore || 0,
+          totalRatings: (prev[showRating]?.totalRatings || 0) + 1,
+        },
+      }));
+      setShowRating(null);
+      setRatingScore(0);
+      setRatingComment('');
+    }
+  };
 
   const filtered = meetings.filter((m) => {
     if (activeTab === 'upcoming') return m.status === 'PENDING' || m.status === 'ACTIVE';
@@ -137,7 +214,6 @@ export default function MeetingsPage() {
         </Button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200 mb-6">
         {(['upcoming', 'completed', 'cancelled'] as const).map((tab) => (
           <button
@@ -157,13 +233,13 @@ export default function MeetingsPage() {
         ))}
       </div>
 
-      {/* Meeting list */}
       {loading ? (
         <div className="py-16 text-center text-slate-400">Loading meetings...</div>
       ) : (
         <div className="space-y-3">
           {filtered.map((meeting) => {
             const partner = meeting.owner.id === session?.user?.id ? meeting.guest : meeting.owner;
+            const rating = ratingInfos[meeting.id];
             return (
               <div
                 key={meeting.id}
@@ -193,7 +269,18 @@ export default function MeetingsPage() {
                     </>
                   )}
                   {meeting.status === 'COMPLETED' && (
-                    <Badge variant="success">Completed</Badge>
+                    <>
+                      <Badge variant="success">Completed</Badge>
+                      {rating?.userRating ? (
+                        <span className="text-sm text-amber-500">
+                          {'★'.repeat(rating.userRating)}{'☆'.repeat(5 - rating.userRating)}
+                        </span>
+                      ) : (
+                        <Button size="sm" variant="secondary" onClick={() => setShowRating(meeting.id)}>
+                          Rate
+                        </Button>
+                      )}
+                    </>
                   )}
                   {meeting.status === 'CANCELLED' && (
                     <Badge variant="danger">Cancelled</Badge>
@@ -212,7 +299,6 @@ export default function MeetingsPage() {
         </div>
       )}
 
-      {/* New Meeting Modal */}
       <Modal
         isOpen={showNew}
         onClose={() => setShowNew(false)}
@@ -251,6 +337,49 @@ export default function MeetingsPage() {
             </Button>
             <Button onClick={handleCreate} className="flex-1" disabled={!newTitle || !newDate || !newTime}>
               Create Meeting
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!showRating}
+        onClose={() => { setShowRating(null); setRatingScore(0); setRatingComment(''); }}
+        title="Rate Your Session"
+      >
+        <div className="space-y-4">
+          <div className="flex justify-center gap-1 py-4">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => setRatingScore(star)}
+                className={`text-3xl transition-colors ${
+                  star <= ratingScore ? 'text-amber-400' : 'text-slate-300'
+                } hover:text-amber-400`}
+              >
+                {star <= ratingScore ? '★' : '☆'}
+              </button>
+            ))}
+          </div>
+          {ratingScore > 0 && (
+            <p className="text-center text-sm text-slate-500">{STAR_LABELS[ratingScore - 1]}</p>
+          )}
+          <Input
+            label="Comment (optional)"
+            placeholder="How was your practice session?"
+            value={ratingComment}
+            onChange={(e) => setRatingComment(e.target.value)}
+          />
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => { setShowRating(null); setRatingScore(0); setRatingComment(''); }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRate} className="flex-1" disabled={!ratingScore}>
+              Submit Rating
             </Button>
           </div>
         </div>
