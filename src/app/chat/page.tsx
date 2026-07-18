@@ -167,10 +167,11 @@ export default function ChatPage() {
     const socket = getSocket();
     if (!socket?.connected || !selectedContact || !session?.user?.id) return;
 
-    socket.emit('typing:start', { conversationId: selectedContact.id, userId: session.user.id });
+    const emitUserId = session.user.id;
+    socket.emit('typing:start', { conversationId: selectedContact.id, userId: emitUserId });
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      socket.emit('typing:stop', { conversationId: selectedContact.id, userId: session.user.id });
+      socket.emit('typing:stop', { conversationId: selectedContact.id, userId: emitUserId });
     }, 2000);
   }, [selectedContact, session]);
 
