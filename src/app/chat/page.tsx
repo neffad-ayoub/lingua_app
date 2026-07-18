@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useSocket, getSocket } from '@/lib/socket';
 
 interface Contact {
   id: string;
@@ -27,6 +29,7 @@ interface MessageData {
 
 export default function ChatPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
@@ -34,9 +37,13 @@ export default function ChatPage() {
   const [showCorrect, setShowCorrect] = useState<string | null>(null);
   const [correctionText, setCorrectionText] = useState('');
   const [correctionNote, setCorrectionNote] = useState('');
+  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const socketRef = useSocket(session?.user?.id, selectedContact?.id);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -64,7 +71,6 @@ export default function ChatPage() {
         return msgs;
       });
       if (msgs.length > 0) lastMessageTime.current = msgs[msgs.length - 1].createdAt;
-      // Refresh unread count
       if (session?.user?.id) {
         fetch(`/api/conversations?userId=${session.user.id}`)
           .then((r) => r.json())
@@ -86,6 +92,42 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onMessage = (msg: MessageData) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    };
+
+    const onCorrection = (corr: { messageId: string; id: string; original: string; corrected: string; note?: string }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === corr.messageId
+            ? { ...m, corrections: [...(m.corrections || []), { id: corr.id, original: corr.original, corrected: corr.corrected, note: corr.note || null }] }
+            : m
+        )
+      );
+    };
+
+    const onTyping = (data: { userId: string; isTyping: boolean }) => {
+      setTypingUsers((prev) => ({ ...prev, [data.userId]: data.isTyping }));
+    };
+
+    socket.on('message:new', onMessage);
+    socket.on('correction:new', onCorrection);
+    socket.on('typing:update', onTyping);
+
+    return () => {
+      socket.off('message:new', onMessage);
+      socket.off('correction:new', onCorrection);
+      socket.off('typing:update', onTyping);
+    };
+  }, []);
+
   const handleSend = useCallback(async () => {
     if (!messageInput.trim() || !selectedContact || !session?.user?.id) return;
 
@@ -103,8 +145,29 @@ export default function ChatPage() {
       const data = await res.json();
       setMessages((prev) => [...prev, data.message]);
       setMessageInput('');
+
+      const socket = getSocket();
+      if (socket?.connected) {
+        socket.emit('message:send', {
+          conversationId: selectedContact.id,
+          senderId: session.user.id,
+          content: messageInput,
+        });
+      }
     }
   }, [messageInput, selectedContact, session]);
+
+  const handleTyping = useCallback((value: string) => {
+    setMessageInput(value);
+    const socket = getSocket();
+    if (!socket?.connected || !selectedContact || !session?.user?.id) return;
+
+    socket.emit('typing:start', { conversationId: selectedContact.id, userId: session.user.id });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('typing:stop', { conversationId: selectedContact.id, userId: session.user.id });
+    }, 2000);
+  }, [selectedContact, session]);
 
   const handleCorrect = async (messageId: string) => {
     if (!selectedContact || !correctionText.trim() || !session?.user?.id) return;
@@ -136,12 +199,33 @@ export default function ChatPage() {
       setShowCorrect(null);
       setCorrectionText('');
       setCorrectionNote('');
+
+      const socket = getSocket();
+      if (socket?.connected) {
+        socket.emit('correction:send', {
+          conversationId: selectedContact.id,
+          messageId,
+          authorId: session.user.id,
+          original: msg.content,
+          corrected: correctionText,
+          note: correctionNote || undefined,
+        });
+      }
     }
   };
 
+  const startVideoCall = useCallback(() => {
+    if (!selectedContact) return;
+    const partnerId = contacts.find((c) => c.id === selectedContact.id);
+    if (partnerId) router.push(`/video?partner=${partnerId.id}`);
+  }, [selectedContact, contacts, router]);
+
+  const isTypingOther = selectedContact
+    ? Object.entries(typingUsers).some(([uid, typing]) => typing && uid !== session?.user?.id)
+    : false;
+
   return (
     <div className="flex h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)]">
-      {/* Sidebar — contacts */}
       <div className="w-80 border-r border-slate-200 bg-white md:block">
         <div className="border-b border-slate-200 p-4">
           <h2 className="text-lg font-semibold">Messages</h2>
@@ -175,24 +259,21 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Main chat area */}
       {selectedContact ? (
         <div className="flex flex-1 flex-col bg-slate-50">
-          {/* Chat header */}
           <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
             <div className="flex items-center gap-3">
               <Avatar name={selectedContact.name} size="sm" />
               <div>
                 <h3 className="text-sm font-semibold">{selectedContact.name}</h3>
+                {isTypingOther && <p className="text-xs text-indigo-500">typing...</p>}
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" variant="secondary">📞 Voice</Button>
-              <Button size="sm">📹 Video</Button>
+              <Button size="sm" variant="secondary" onClick={startVideoCall}>📹 Video</Button>
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="py-16 text-center text-sm text-slate-400">No messages yet. Say hello!</div>
@@ -226,10 +307,9 @@ export default function ChatPage() {
               );
             })}
 
-            {/* Corrections rendered separately */}
             {messages.map((msg) =>
               msg.corrections?.map((corr) => (
-                <div key={corr.id} className="mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3 animate-fade-in">
+                <div key={corr.id} className="mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3">
                   <p className="mb-1 text-xs font-medium text-amber-700">✏️ Correction</p>
                   <p className="text-sm text-red-600 line-through">{corr.original}</p>
                   <p className="text-sm font-medium text-green-700">{corr.corrected}</p>
@@ -241,9 +321,8 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Correction input */}
           {showCorrect && (
-            <div className="border-t border-amber-200 bg-amber-50 p-3 animate-fade-in">
+            <div className="border-t border-amber-200 bg-amber-50 p-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-medium text-amber-700">✏️ Correcting message</p>
                 <button onClick={() => setShowCorrect(null)} className="text-amber-500 hover:text-amber-700">✕</button>
@@ -256,10 +335,10 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* Message input */}
           <div className="border-t border-slate-200 bg-white p-3">
             <div className="flex items-center gap-2">
-              <input placeholder="Type a message..." value={messageInput} onChange={(e) => setMessageInput(e.target.value)}
+              <input placeholder="Type a message..." value={messageInput}
+                onChange={(e) => handleTyping(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
               <Button size="sm" onClick={handleSend} disabled={!messageInput.trim()}>Send</Button>
