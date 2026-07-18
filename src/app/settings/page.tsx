@@ -13,6 +13,11 @@ export default function SettingsPage() {
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
   const [showMap, setShowMap] = useState(false);
+  const [notifyMessages, setNotifyMessages] = useState(true);
+  const [notifyMeetings, setNotifyMeetings] = useState(true);
+  const [notifyCorrections, setNotifyCorrections] = useState(true);
+  const [notifyPartners, setNotifyPartners] = useState(false);
+  const [messagePrivacy, setMessagePrivacy] = useState('all');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pwCurrent, setPwCurrent] = useState('');
@@ -36,7 +41,12 @@ export default function SettingsPage() {
             setBio(user.bio || '');
             setCountry(user.profile?.country || '');
             setCity(user.profile?.city || '');
-            setShowMap(user.profile?.showMap || false);
+            setShowMap(user.profile?.showMap ?? false);
+            setNotifyMessages(user.profile?.notifyMessages ?? true);
+            setNotifyMeetings(user.profile?.notifyMeetings ?? true);
+            setNotifyCorrections(user.profile?.notifyCorrections ?? true);
+            setNotifyPartners(user.profile?.notifyPartners ?? false);
+            setMessagePrivacy(user.profile?.messagePrivacy ?? 'all');
           }
         })
         .catch(() => {});
@@ -59,6 +69,11 @@ export default function SettingsPage() {
           country,
           city,
           showMap,
+          notifyMessages,
+          notifyMeetings,
+          notifyCorrections,
+          notifyPartners,
+          messagePrivacy,
         }),
       });
 
@@ -145,19 +160,20 @@ export default function SettingsPage() {
           <h2 className="mb-4 text-lg font-semibold">Notifications</h2>
           <div className="space-y-3">
             {[
-              { label: 'Message notifications', desc: 'When someone sends you a message', default: true },
-              { label: 'Meeting reminders', desc: '15 minutes before a scheduled meeting', default: true },
-              { label: 'Correction alerts', desc: 'When someone corrects your post', default: true },
-              { label: 'New partner suggestions', desc: 'Weekly recommended language partners', default: false },
+              { key: 'notifyMessages', label: 'Message notifications', desc: 'When someone sends you a message', value: notifyMessages, setter: setNotifyMessages },
+              { key: 'notifyMeetings', label: 'Meeting reminders', desc: '15 minutes before a scheduled meeting', value: notifyMeetings, setter: setNotifyMeetings },
+              { key: 'notifyCorrections', label: 'Correction alerts', desc: 'When someone corrects your post', value: notifyCorrections, setter: setNotifyCorrections },
+              { key: 'notifyPartners', label: 'New partner suggestions', desc: 'Weekly recommended language partners', value: notifyPartners, setter: setNotifyPartners },
             ].map((pref) => (
-              <label key={pref.label} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
+              <label key={pref.key} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
                 <div>
                   <span className="text-sm font-medium">{pref.label}</span>
                   <p className="text-xs text-slate-400">{pref.desc}</p>
                 </div>
                 <input
                   type="checkbox"
-                  defaultChecked={pref.default}
+                  checked={pref.value}
+                  onChange={(e) => pref.setter(e.target.checked)}
                   className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
               </label>
@@ -170,7 +186,8 @@ export default function SettingsPage() {
           <h2 className="mb-4 text-lg font-semibold">Privacy</h2>
           <Select
             label="Who can message you"
-            value="all"
+            value={messagePrivacy}
+            onChange={(e) => setMessagePrivacy(e.target.value)}
             options={[
               { value: 'all', label: 'Everyone' },
               { value: 'verified', label: 'Verified users only' },

@@ -75,7 +75,11 @@ export async function DELETE(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userId, name, bio, country, city, showMap } = body;
+    const {
+      userId, name, bio, country, city, showMap,
+      notifyMessages, notifyMeetings, notifyCorrections, notifyPartners,
+      messagePrivacy,
+    } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
@@ -88,8 +92,19 @@ export async function PUT(request: Request) {
         bio: bio ?? undefined,
         profile: {
           upsert: {
-            create: { country, city, showMap: showMap ?? false },
-            update: { country, city, showMap: showMap ?? undefined },
+            create: {
+              country, city, showMap: showMap ?? false,
+              notifyMessages, notifyMeetings, notifyCorrections, notifyPartners,
+              messagePrivacy,
+            },
+            update: {
+              country, city, showMap: showMap ?? undefined,
+              notifyMessages: notifyMessages ?? undefined,
+              notifyMeetings: notifyMeetings ?? undefined,
+              notifyCorrections: notifyCorrections ?? undefined,
+              notifyPartners: notifyPartners ?? undefined,
+              messagePrivacy: messagePrivacy ?? undefined,
+            },
           },
         },
       },

@@ -85,13 +85,18 @@ enum Proficiency {
 }
 
 model UserProfile {
-  id      String  @id @default(cuid())
-  userId  String  @unique
-  country String?
-  city    String?
-  lat     Float?
-  lng     Float?
-  showMap Boolean @default(false)
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  country           String?
+  city              String?
+  lat               Float?
+  lng               Float?
+  showMap           Boolean @default(false)
+  notifyMessages    Boolean @default(true)
+  notifyMeetings    Boolean @default(true)
+  notifyCorrections Boolean @default(true)
+  notifyPartners    Boolean @default(false)
+  messagePrivacy    String  @default("all")
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
