@@ -1,10 +1,12 @@
 import { decode } from 'next-auth/jwt';
 
+const cookieName = process.env.NODE_ENV === 'production'
+  ? '__Secure-next-auth.session-token'
+  : 'next-auth.session-token';
+const salt = 'next-auth.session-token';
+
 export async function getSessionFromCookie(request: Request) {
   const cookies = request.headers.get('cookie') || '';
-  const cookieName = process.env.NODE_ENV === 'production'
-    ? '__Secure-next-auth.session-token'
-    : 'next-auth.session-token';
   const match = cookies.split(';').find(c => c.trim().startsWith(cookieName));
   if (!match) return null;
 
@@ -12,7 +14,7 @@ export async function getSessionFromCookie(request: Request) {
   if (!token) return null;
 
   try {
-    const decoded = await decode({ token, secret: process.env.NEXTAUTH_SECRET! });
+    const decoded = await decode({ token, secret: process.env.NEXTAUTH_SECRET!, salt });
     if (!decoded || !decoded.sub) return null;
     return { user: { id: decoded.sub } };
   } catch {
