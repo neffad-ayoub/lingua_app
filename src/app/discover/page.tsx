@@ -131,7 +131,7 @@ export default function DiscoverPage() {
     });
     if (res.ok) {
       const data = await res.json();
-      router.push(`/video?room=${data.call.roomCode}`);
+      router.push(`/video?room=${data.call.roomCode}&meetingId=${data.call.id}`);
     }
   }, [router]);
 

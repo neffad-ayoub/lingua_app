@@ -25,12 +25,18 @@ function VideoCallContent() {
   const roomRef = useRef<Room | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const remoteTracksRef = useRef<Map<string, RemoteTrackPublication>>(new Map());
+  const autoJoinRef = useRef(false);
+  const meetingIdRef = useRef('');
 
   useEffect(() => {
     const room = searchParams.get('room');
+    const meetingId = searchParams.get('meetingId');
     const partner = searchParams.get('partner');
-    if (room) {
+    if (meetingId) meetingIdRef.current = meetingId;
+    if (room && !autoJoinRef.current && session?.user?.id) {
+      autoJoinRef.current = true;
       setRoomCode(room);
+      handleJoinRoom(room);
     }
     if (partner && session?.user?.id) {
       handleCreateDirectCall(partner);
@@ -136,11 +142,12 @@ function VideoCallContent() {
     }
   };
 
-  const handleJoinRoom = async () => {
-    if (roomCode.trim().length < 6) return;
+  const handleJoinRoom = async (code?: string) => {
+    const joinCode = (code || roomCode).trim();
+    if (joinCode.length < 6) return;
     try {
-      const data = await fetchLiveKitToken(roomCode.trim());
-      await connectToRoom(roomCode.trim(), data.token, data.url);
+      const data = await fetchLiveKitToken(joinCode);
+      await connectToRoom(joinCode, data.token, data.url);
     } catch {
       setConnectionState('error');
     }
@@ -158,7 +165,17 @@ function VideoCallContent() {
     }
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
+    const mid = meetingIdRef.current;
+    if (mid) {
+      try {
+        await fetch('/api/meetings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meetingId: mid, status: 'CANCELLED' }),
+        });
+      } catch {}
+    }
     cleanupRoom();
     setIsInCall(false);
     setGeneratedCode('');
@@ -310,7 +327,7 @@ function VideoCallContent() {
           <h2 className="mb-2 text-lg font-semibold">Join a Room</h2>
           <p className="mb-4 text-sm text-slate-500">Enter the room code your partner shared with you.</p>
           <Input placeholder="Enter room code..." value={roomCode} onChange={(e) => setRoomCode(e.target.value.toUpperCase())} className="mb-3 font-mono text-center text-lg tracking-widest" />
-          <Button onClick={handleJoinRoom} className="w-full" disabled={roomCode.trim().length < 6}>Join Room</Button>
+          <Button onClick={() => handleJoinRoom()} className="w-full" disabled={roomCode.trim().length < 6}>Join Room</Button>
         </div>
       </div>
       <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

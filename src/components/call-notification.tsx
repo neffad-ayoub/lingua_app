@@ -19,11 +19,20 @@ export function CallNotification() {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const enabledRef = useRef(true);
 
+  const userIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (!session?.user?.id) return;
+    const uid = session?.user?.id;
+    if (!uid) {
+      setIncomingCall(null);
+      enabledRef.current = false;
+      return;
+    }
+
+    if (userIdRef.current === uid) return;
+    userIdRef.current = uid;
 
     enabledRef.current = true;
-    setIncomingCall(null);
 
     const interval = setInterval(async () => {
       if (!enabledRef.current) return;
@@ -41,9 +50,8 @@ export function CallNotification() {
 
     return () => {
       clearInterval(interval);
-      enabledRef.current = false;
     };
-  }, [session]);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (pathname === '/video' || pathname.startsWith('/video/')) {
@@ -62,10 +70,10 @@ export function CallNotification() {
       body: JSON.stringify({ action: 'accept' }),
     });
     if (res.ok) {
-      const room = incomingCall.roomCode;
+      const { roomCode, id } = incomingCall;
       setIncomingCall(null);
       enabledRef.current = true;
-      router.push(`/video?room=${room}`);
+      router.push(`/video?room=${roomCode}&meetingId=${id}`);
     }
   };
 
