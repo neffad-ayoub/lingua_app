@@ -73,16 +73,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'At least 2 participants required' }, { status: 400 });
     }
 
-    const allIds = [...new Set([session.user.id, ...participantIds])];
+    const userId = session.user.id;
+    const allIds = [...new Set([userId, ...participantIds])];
 
     if (!isGroup) {
-      const otherId = allIds.find((id) => id !== session.user.id);
+      const otherId = allIds.find((id) => id !== userId);
       if (otherId) {
         const existing = await prisma.conversation.findFirst({
           where: {
             isGroup: false,
             AND: [
-              { members: { some: { userId: session.user.id } } },
+              { members: { some: { userId } } },
               { members: { some: { userId: otherId } } },
             ],
           },
