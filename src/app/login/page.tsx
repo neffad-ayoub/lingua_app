@@ -63,6 +63,11 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           />
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-xs text-indigo-600 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <Button onClick={handleLogin} className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
