@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import { useSocket, getSocket } from '@/lib/socket';
 
 interface Contact {
@@ -38,6 +39,10 @@ export default function ChatPage() {
   const [correctionText, setCorrectionText] = useState('');
   const [correctionNote, setCorrectionNote] = useState('');
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('inappropriate');
+  const [reportDesc, setReportDesc] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -214,6 +219,30 @@ export default function ChatPage() {
     }
   };
 
+  const handleBlock = async (targetId: string) => {
+    const res = await fetch('/api/blocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedId: targetId }),
+    });
+    if (res.ok) {
+      setContacts((prev) => prev.filter((c) => c.id !== targetId));
+      if (selectedContact?.id === targetId) setSelectedContact(null);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportTarget) return;
+    await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportedId: reportTarget, reason: reportReason, description: reportDesc || undefined }),
+    });
+    setReportTarget(null);
+    setReportReason('inappropriate');
+    setReportDesc('');
+  };
+
   const startVideoCall = useCallback(() => {
     if (!selectedContact) return;
     const partnerId = contacts.find((c) => c.id === selectedContact.id);
@@ -269,8 +298,34 @@ export default function ChatPage() {
                 {isTypingOther && <p className="text-xs text-indigo-500">typing...</p>}
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button size="sm" variant="secondary" onClick={startVideoCall}>📹 Video</Button>
+              <div className="relative">
+                <button
+                  onClick={() => setOpenMenu(openMenu === selectedContact.id ? null : selectedContact.id)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01" />
+                  </svg>
+                </button>
+                {openMenu === selectedContact.id && (
+                  <div className="absolute right-0 top-8 z-10 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                    <button
+                      onClick={() => { handleBlock(selectedContact.id); setOpenMenu(null); }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      Block user
+                    </button>
+                    <button
+                      onClick={() => { setReportTarget(selectedContact.id); setOpenMenu(null); }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Report user
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -353,6 +408,43 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
+      <Modal isOpen={!!reportTarget} onClose={() => { setReportTarget(null); setReportReason('inappropriate'); setReportDesc(''); }} title="Report User">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+            <select
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="inappropriate">Inappropriate behavior</option>
+              <option value="spam">Spam</option>
+              <option value="harassment">Harassment</option>
+              <option value="fake">Fake account</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
+            <textarea
+              value={reportDesc}
+              onChange={(e) => setReportDesc(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+              placeholder="Provide more details..."
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" className="flex-1" onClick={() => { setReportTarget(null); setReportReason('inappropriate'); setReportDesc(''); }}>
+              Cancel
+            </Button>
+            <Button className="flex-1" onClick={handleReport}>
+              Submit Report
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
