@@ -47,7 +47,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!session?.user?.id) return;
-    fetch(`/api/conversations?userId=${session.user.id}`)
+    fetch(`/api/conversations`)
       .then((r) => r.json())
       .then((data) => {
         const convs = data.conversations || [];
@@ -72,7 +72,7 @@ export default function ChatPage() {
       });
       if (msgs.length > 0) lastMessageTime.current = msgs[msgs.length - 1].createdAt;
       if (session?.user?.id) {
-        fetch(`/api/conversations?userId=${session.user.id}`)
+        fetch(`/api/conversations`)
           .then((r) => r.json())
           .then((d) => setContacts(d.conversations || []));
       }

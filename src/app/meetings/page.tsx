@@ -70,7 +70,7 @@ export default function MeetingsPage() {
 
   useEffect(() => {
     if (!session?.user?.id) return;
-    fetch(`/api/meetings?userId=${session.user.id}`)
+    fetch(`/api/meetings`)
       .then((r) => r.json())
       .then((data) => {
         setMeetings(data.meetings || []);
@@ -93,7 +93,6 @@ export default function MeetingsPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ownerId: session.user.id,
         title: newTitle,
         languageId: newLang || null,
         scheduledAt: `${newDate}T${newTime}:00`,

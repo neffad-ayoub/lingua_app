@@ -1,19 +1,25 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { reportedId, reportedById, reason, description } = body;
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!reportedId || !reportedById || !reason) {
+    const body = await request.json();
+    const { reportedId, reason, description } = body;
+
+    if (!reportedId || !reason) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const report = await prisma.report.create({
       data: {
         reportedId,
-        reportedById,
+        reportedById: session.user.id,
         reason,
         description: description || null,
       },

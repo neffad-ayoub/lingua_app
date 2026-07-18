@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateRoomCode } from '@/lib/utils';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-  const status = searchParams.get('status');
-
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get('status');
+
   const where: Record<string, unknown> = {
-    OR: [{ ownerId: userId }, { guestId: userId }],
+    OR: [{ ownerId: session.user.id }, { guestId: session.user.id }],
   };
 
   if (status) {
@@ -38,6 +39,11 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { meetingId, status, guestId } = body;
 
@@ -45,7 +51,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'meetingId and status are required' }, { status: 400 });
     }
 
-    const meeting = await prisma.meeting.update({
+    const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
+    if (!meeting) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+    }
+    if (meeting.ownerId !== session.user.id && meeting.guestId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const updated = await prisma.meeting.update({
       where: { id: meetingId },
       data: {
         status,
@@ -60,7 +74,7 @@ export async function PATCH(request: Request) {
       },
     });
 
-    return NextResponse.json({ meeting });
+    return NextResponse.json({ meeting: updated });
   } catch {
     return NextResponse.json({ error: 'Failed to update meeting' }, { status: 500 });
   }
@@ -68,16 +82,21 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { ownerId, guestId, title, languageId, scheduledAt } = body;
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!ownerId || !scheduledAt) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const body = await request.json();
+    const { guestId, title, languageId, scheduledAt } = body;
+
+    if (!scheduledAt) {
+      return NextResponse.json({ error: 'scheduledAt is required' }, { status: 400 });
     }
 
     const meeting = await prisma.meeting.create({
       data: {
-        ownerId,
+        ownerId: session.user.id,
         guestId: guestId || null,
         title: title || null,
         languageId: languageId || null,

@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const conversations = await prisma.conversation.findMany({
       where: {
-        members: { some: { userId } },
+        members: { some: { userId: session.user.id } },
       },
       include: {
         members: {
@@ -30,18 +29,18 @@ export async function GET(request: Request) {
     });
 
     const formatted = await Promise.all(conversations.map(async (conv) => {
-      const member = conv.members.find((m) => m.user.id === userId);
+      const member = conv.members.find((m) => m.user.id === session.user.id);
       const lastReadAt = member?.lastReadAt || new Date(0);
 
       const unread = await prisma.message.count({
         where: {
           conversationId: conv.id,
-          senderId: { not: userId },
+          senderId: { not: session.user.id },
           createdAt: { gt: lastReadAt },
         },
       });
 
-      const otherMember = conv.members.find((m) => m.user.id !== userId);
+      const otherMember = conv.members.find((m) => m.user.id !== session.user.id);
       return {
         id: conv.id,
         name: conv.name || otherMember?.user.name || 'Unknown',
@@ -61,6 +60,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { participantIds, name, isGroup } = body;
 
@@ -68,24 +72,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'At least 2 participants required' }, { status: 400 });
     }
 
-    if (!isGroup) {
-      const existing = await prisma.conversation.findFirst({
-        where: {
-          isGroup: false,
-          AND: [
-            { members: { some: { userId: participantIds[0] } } },
-            { members: { some: { userId: participantIds[1] } } },
-          ],
-        },
-        include: {
-          members: {
-            include: { user: { select: { id: true, name: true, image: true } } },
-          },
-        },
-      });
+    const allIds = [...new Set([session.user.id, ...participantIds])];
 
-      if (existing) {
-        return NextResponse.json({ conversation: existing });
+    if (!isGroup) {
+      const otherId = allIds.find((id) => id !== session.user.id);
+      if (otherId) {
+        const existing = await prisma.conversation.findFirst({
+          where: {
+            isGroup: false,
+            AND: [
+              { members: { some: { userId: session.user.id } } },
+              { members: { some: { userId: otherId } } },
+            ],
+          },
+          include: {
+            members: {
+              include: { user: { select: { id: true, name: true, image: true } } },
+            },
+          },
+        });
+
+        if (existing) {
+          return NextResponse.json({ conversation: existing });
+        }
       }
     }
 
@@ -94,7 +103,7 @@ export async function POST(request: Request) {
         name: name || null,
         isGroup: isGroup || false,
         members: {
-          create: participantIds.map((pid: string) => ({ userId: pid })),
+          create: allIds.map((pid: string) => ({ userId: pid })),
         },
       },
       include: {

@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { meetingId, userId, givenById, score, comment } = body;
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!meetingId || !userId || !givenById || !score) {
+    const body = await request.json();
+    const { meetingId, userId, score, comment } = body;
+
+    if (!meetingId || !userId || !score) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -18,7 +24,7 @@ export async function POST(request: Request) {
       data: {
         meetingId,
         userId,
-        givenById,
+        givenById: session.user.id,
         score,
         comment: comment || null,
       },
