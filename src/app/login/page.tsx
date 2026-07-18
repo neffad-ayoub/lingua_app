@@ -21,6 +21,7 @@ export default function LoginPage() {
       email: email.toLowerCase().trim(),
       password,
       redirect: false,
+      callbackUrl: '/discover',
     });
 
     if (result?.error) {

@@ -81,6 +81,7 @@ export default function RegisterPage() {
         email: email.toLowerCase().trim(),
         password,
         redirect: false,
+        callbackUrl: '/discover',
       });
 
       if (result?.error) {
