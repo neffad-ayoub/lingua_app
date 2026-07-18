@@ -10,7 +10,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { calleeId } = await request.json();
+    let calleeId: string;
+    try {
+      const body = await request.json();
+      calleeId = body.calleeId;
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
     if (!calleeId) {
       return NextResponse.json({ error: 'calleeId is required' }, { status: 400 });
     }
@@ -31,8 +38,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ call }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Failed to initiate call' }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
