@@ -28,19 +28,20 @@ export async function GET(request: Request) {
       orderBy: { updatedAt: 'desc' },
     });
 
+    const userId = session.user.id;
     const formatted = await Promise.all(conversations.map(async (conv) => {
-      const member = conv.members.find((m) => m.user.id === session.user.id);
+      const member = conv.members.find((m) => m.user.id === userId);
       const lastReadAt = member?.lastReadAt || new Date(0);
 
       const unread = await prisma.message.count({
         where: {
           conversationId: conv.id,
-          senderId: { not: session.user.id },
+          senderId: { not: userId },
           createdAt: { gt: lastReadAt },
         },
       });
 
-      const otherMember = conv.members.find((m) => m.user.id !== session.user.id);
+      const otherMember = conv.members.find((m) => m.user.id !== userId);
       return {
         id: conv.id,
         name: conv.name || otherMember?.user.name || 'Unknown',
