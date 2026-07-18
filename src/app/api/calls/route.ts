@@ -10,13 +10,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    let calleeId: string;
+    const raw = await request.text();
+    let parsed: Record<string, unknown>;
     try {
-      const body = await request.json();
-      calleeId = body.calleeId;
+      parsed = JSON.parse(raw);
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      return NextResponse.json({ error: `Invalid JSON: "${raw.slice(0, 100)}"` }, { status: 400 });
     }
+    const calleeId = parsed.calleeId as string | undefined;
 
     if (!calleeId) {
       return NextResponse.json({ error: 'calleeId is required' }, { status: 400 });
