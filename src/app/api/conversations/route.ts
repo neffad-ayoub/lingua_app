@@ -46,6 +46,7 @@ export async function GET(request: Request) {
         id: conv.id,
         name: conv.name || otherMember?.user.name || 'Unknown',
         image: otherMember?.user.image || null,
+        otherUserId: otherMember?.user.id || null,
         lastMessage: conv.messages[0]?.content || null,
         lastMessageAt: conv.messages[0]?.createdAt || null,
         unread,

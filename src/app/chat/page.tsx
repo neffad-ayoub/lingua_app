@@ -26,6 +26,7 @@ interface Contact {
   id: string;
   name: string;
   image: string | null;
+  otherUserId: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
   unread: number;
@@ -263,11 +264,11 @@ export default function ChatPage() {
   };
 
   const startVideoCall = useCallback(async () => {
-    if (!selectedContact || !session?.user?.id) return;
+    if (!selectedContact || !selectedContact.otherUserId || !session?.user?.id) return;
     const res = await fetch('/api/calls', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ calleeId: selectedContact.id }),
+      body: JSON.stringify({ calleeId: selectedContact.otherUserId }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -276,12 +277,12 @@ export default function ChatPage() {
   }, [selectedContact, session, router]);
 
   const handleScheduleMeeting = useCallback(async () => {
-    if (!selectedContact || !session?.user?.id || !meetingDate || !meetingTime) return;
+    if (!selectedContact || !selectedContact.otherUserId || !session?.user?.id || !meetingDate || !meetingTime) return;
     const res = await fetch('/api/meetings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        guestId: selectedContact.id,
+        guestId: selectedContact.otherUserId,
         title: meetingTitle || `Practice with ${selectedContact.name}`,
         languageId: meetingLang || null,
         scheduledAt: `${meetingDate}T${meetingTime}:00`,

@@ -10,14 +10,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const raw = await request.text();
-    let parsed: Record<string, unknown>;
+    let calleeId: string;
     try {
-      parsed = JSON.parse(raw);
+      const body = await request.json();
+      calleeId = body.calleeId;
     } catch {
-      return NextResponse.json({ error: `Invalid JSON: "${raw.slice(0, 100)}"` }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
-    const calleeId = parsed.calleeId as string | undefined;
 
     if (!calleeId) {
       return NextResponse.json({ error: 'calleeId is required' }, { status: 400 });
@@ -39,9 +38,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ call }, { status: 201 });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Failed to initiate call' }, { status: 500 });
   }
 }
 
