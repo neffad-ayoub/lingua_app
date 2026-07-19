@@ -91,19 +91,19 @@ export function CallNotification() {
   if (!incomingCall) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xl w-72 animate-slide-in">
-        <div className="flex items-center gap-3 mb-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl w-80 animate-fade-in">
+        <div className="flex flex-col items-center gap-4 mb-4">
           <div className="relative">
-            <Avatar name={incomingCall.owner.name || 'Caller'} size="md" />
-            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+            <Avatar name={incomingCall.owner.name || 'Caller'} size="xl" />
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 animate-pulse" />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{incomingCall.owner.name || 'Someone'}</p>
-            <p className="text-xs text-red-500 font-medium">Incoming video call...</p>
+          <div className="text-center">
+            <p className="text-lg font-semibold">{incomingCall.owner.name || 'Someone'}</p>
+            <p className="text-sm text-red-500 font-medium">Incoming video call...</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button size="sm" variant="secondary" className="flex-1" onClick={handleDecline}>Decline</Button>
           <Button size="sm" className="flex-1" onClick={handleAccept}>Accept</Button>
         </div>

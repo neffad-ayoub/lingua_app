@@ -51,6 +51,15 @@ function VideoCallContent() {
     };
   }, [isInCall]);
 
+  useEffect(() => {
+    if (!isInCall || !remoteVideoRef.current) return;
+    remoteTracksRef.current.forEach((pub) => {
+      if (pub.track?.kind === 'video') {
+        pub.track.attach(remoteVideoRef.current!);
+      }
+    });
+  }, [isInCall]);
+
   const cleanupRoom = useCallback(() => {
     if (roomRef.current) {
       roomRef.current.disconnect();
@@ -116,6 +125,14 @@ function VideoCallContent() {
         }
       }
       setIsInCall(true);
+      // Attach any remote tracks that arrived before the DOM was ready
+      if (remoteVideoRef.current) {
+        remoteTracksRef.current.forEach((pub) => {
+          if (pub.track?.kind === 'video') {
+            pub.track.attach(remoteVideoRef.current!);
+          }
+        });
+      }
     } catch {
       setConnectionState('error');
     }
@@ -209,9 +226,11 @@ function VideoCallContent() {
     return `${mins}:${secs}`;
   };
 
+  const pageH = 'h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)]';
+
   if (connectionState === 'connecting') {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-slate-900">
+      <div className={`flex ${pageH} items-center justify-center bg-slate-900`}>
         <div className="text-center text-white">
           <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-slate-600 border-t-indigo-500" />
           <p className="text-lg font-medium">Connecting...</p>
@@ -223,7 +242,7 @@ function VideoCallContent() {
 
   if (connectionState === 'error') {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-slate-900">
+      <div className={`flex ${pageH} items-center justify-center bg-slate-900`}>
         <div className="text-center text-white">
           <p className="mb-2 text-4xl">⚠️</p>
           <p className="mb-2 text-lg font-medium">Connection Failed</p>
@@ -240,7 +259,7 @@ function VideoCallContent() {
 
   if (isInCall) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] flex-col bg-slate-900">
+      <div className={`flex ${pageH} flex-col bg-slate-900`}>
         <div className="flex items-center justify-between bg-slate-800 px-4 py-3">
           <div className="flex items-center gap-3">
             <span className={`h-2 w-2 rounded-full ${remoteParticipants.length > 0 ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse-dot`} />
