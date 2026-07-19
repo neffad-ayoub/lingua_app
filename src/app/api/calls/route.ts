@@ -38,8 +38,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ call }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Failed to initiate call' }, { status: 500 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 

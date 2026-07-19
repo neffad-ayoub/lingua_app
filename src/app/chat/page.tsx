@@ -62,10 +62,25 @@ export default function ChatPage() {
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingLang, setMeetingLang] = useState('');
+  const [contactAvailability, setContactAvailability] = useState<{ dayOfWeek: number; startHour: number; endHour: number }[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!showSchedule || !selectedContact?.otherUserId) {
+      setContactAvailability([]);
+      return;
+    }
+    setLoadingAvailability(true);
+    fetch(`/api/availability?userId=${selectedContact.otherUserId}`)
+      .then((r) => r.json())
+      .then((data) => setContactAvailability(data.availability || []))
+      .catch(() => setContactAvailability([]))
+      .finally(() => setLoadingAvailability(false));
+  }, [showSchedule, selectedContact?.otherUserId]);
 
   const socketRef = useSocket(session?.user?.id, selectedContact?.id);
 
@@ -472,13 +487,78 @@ export default function ChatPage() {
             onChange={(e) => setMeetingLang(e.target.value)}
             options={[{ value: '', label: 'Select language...' }, ...LANGUAGES]}
           />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Date" type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} />
-            <Input label="Time" type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} />
-          </div>
+          {loadingAvailability ? (
+            <p className="text-sm text-slate-500">Loading available times...</p>
+          ) : contactAvailability.length === 0 ? (
+            <p className="text-sm text-amber-600">
+              {selectedContact?.name || 'This user'} has not set their availability yet. You cannot schedule a meeting until they add available time slots in their settings.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Available Days</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {contactAvailability.map((slot, i) => {
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    return (
+                      <span key={i} className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700">
+                        {days[slot.dayOfWeek]} {slot.startHour.toString().padStart(2, '0')}:00–{slot.endHour.toString().padStart(2, '0')}:00
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                <select
+                  value={meetingDate}
+                  onChange={(e) => { setMeetingDate(e.target.value); setMeetingTime(''); }}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  <option value="">Select a date...</option>
+                  {Array.from({ length: 14 }, (_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + i);
+                    const dayOfWeek = d.getDay();
+                    const matchingSlots = contactAvailability.filter(s => s.dayOfWeek === dayOfWeek);
+                    if (matchingSlots.length === 0) return null;
+                    const dateStr = d.toISOString().slice(0, 10);
+                    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    return <option key={dateStr} value={dateStr}>{label}</option>;
+                  })}
+                </select>
+              </div>
+              {meetingDate && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                  <select
+                    value={meetingTime}
+                    onChange={(e) => setMeetingTime(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="">Select a time...</option>
+                    {(() => {
+                      const d = new Date(meetingDate);
+                      const dayOfWeek = d.getDay();
+                      const matchingSlots = contactAvailability.filter(s => s.dayOfWeek === dayOfWeek);
+                      const options: { value: string; label: string }[] = [];
+                      for (const slot of matchingSlots) {
+                        for (let h = slot.startHour; h < slot.endHour; h++) {
+                          const val = `${h.toString().padStart(2, '0')}:00`;
+                          const label = d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + val;
+                          options.push({ value: val, label });
+                        }
+                      }
+                      return options.map(o => <option key={o.value} value={o.value}>{o.label}</option>);
+                    })()}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowSchedule(false)} className="flex-1">Cancel</Button>
-            <Button onClick={handleScheduleMeeting} className="flex-1" disabled={!meetingDate || !meetingTime}>
+            <Button onClick={handleScheduleMeeting} className="flex-1" disabled={!meetingDate || !meetingTime || contactAvailability.length === 0}>
               Schedule Meeting
             </Button>
           </div>
